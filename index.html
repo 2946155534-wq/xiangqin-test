@@ -1765,7 +1765,17 @@
         @keyframes fun-bounce { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-8px) rotate(6deg); } }
         @keyframes resultPop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; }
         @keyframes fadeOut { to { opacity: 0; transform: scale(0.9); } }
-        @keyframes badgeGlow { 0%,100% { box-shadow: 0 6px 24px rgba(0,0,0,0.15); } 50% { box-shadow: 0 6px 36px rgba(255,107,157,0.35), 0 0 60px rgba(255,157,107,0.15); } } 100% { transform: scale(1); } }
+        @keyframes badgeGlow { 0%,100% { box-shadow: 0 6px 24px rgba(0,0,0,0.15); } 50% { box-shadow: 0 6px 36px rgba(255,107,157,0.35), 0 0 60px rgba(255,157,107,0.15); } }
+        @keyframes unlockShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .blur-locked { position: relative; filter: blur(3px); user-select: none; opacity: 0.7; transition: all 0.5s ease; }
+        .blur-locked::after { content: ''; position: absolute; inset: 0; z-index: 5; }
+        .blur-unlocked { filter: blur(0); user-select: auto; pointer-events: auto; opacity: 1; }
+        .lock-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 10; text-align: center; cursor: pointer; }
+        .lock-icon { font-size: 48px; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); animation: badgeGlow 2s infinite; }
+        .lock-text { font-size: 14px; font-weight: 700; color: #e0557f; margin-top: 6px; background: rgba(255,255,255,0.9); padding: 6px 16px; border-radius: 99px; }
+        .unlock-input-wrap { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 10px 0; }
+        .unlock-input { padding: 10px 14px; border-radius: 10px; border: 2px solid #e0e0e0; font-size: 14px; text-align: center; outline: none; width: 160px; }
+        .unlock-input:focus { border-color: #e0557f; } 100% { transform: scale(1); } }
         .fun-title {
             font-size: 24px; font-weight: 900; margin: 8px 0 6px;
             background: linear-gradient(90deg, #7b2ff7, #f107a3, #ff6b9d);
@@ -2927,7 +2937,7 @@
             <div style="font-size:19px;font-weight:700;color:var(--text);">适配你的TA · ${pScore} 分</div>
             <div style="font-size:26px;font-weight:900;color:#f5a623;margin:6px 0;">❤️ 适配度 ${fit}%</div>
             <p class="result-msg">${fitComment}</p>
-            <div class="radar-wrap" style="margin-top:12px;">
+            <div class="radar-wrap" style="margin-top:12px;" id="partnerLockContent" class="blur-locked">
                 <div class="radar-title">💌 ${genderLabel}的条件档案</div>
                 <div class="radar-sub" style="text-align:left;padding:8px 4px 0;line-height:2;">
                     ${pProfile.map(p => `<span style="display:inline-block;background:#f5f5f5;border-radius:8px;padding:3px 10px;margin:3px 4px;font-size:12px;color:#555;">${p}</span>`).join('')}
@@ -2946,6 +2956,7 @@
             document.getElementById('resultModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
             tagCycleIdx[gradeInfo.grade] = 0;
+            setTimeout(tryAutoUnlock, 200);
         }
         function showStrengthAdvice() {
             const el = document.getElementById('strengthAdvice');
@@ -3051,12 +3062,30 @@
                 <button class="btn btn-gold" style="width:100%;padding:12px;font-size:15px;" onclick="showCompatiblePartner()">💑 看看适合你的另一半</button>
                 <button class="btn btn-outline" style="font-size:14px;padding:10px;border-color:var(--pink);color:var(--pink-dark);" onclick="showPrivateDomain()">🎁 免费领取完整分析报告</button>
             </div>
+            <div style="background:#fffbe6;border-radius:12px;padding:14px 16px;margin:14px 0;text-align:left;font-size:14px;line-height:2.2;color:#000;border:1px solid #ffe8a3;">
+                <b style="font-size:16px;color:#000;">📊 各项得分明细</b><br>
+                ${(function(){const cats2=data.categories.filter(c=>c.type==='radio');let rows='';cats2.forEach(c=>{const sel=selections[c.id];const opt=sel?c.options.find(o=>o.id===sel):null;const score=opt?opt.score:0;const max=c.options[0].score>c.options[c.options.length-1].score?c.options[0].score:c.options[c.options.length-1].score;const filled=Math.round(score/max*10);const accent=currentVersion==='male'?'#1565c0':'#c2185b';const bar='<span style=\"color:'+accent+';font-weight:900;letter-spacing:1px;font-size:15px;\">'+'█'.repeat(filled)+'</span><span style=\"color:#bbb;font-size:15px;\">'+'░'.repeat(10-filled)+'</span>';rows+='<div style=\"color:#000;font-size:14px;margin:6px 0;\"><span style=\"color:#000;font-weight:700;\">· '+c.title.replace('你的','')+'</span><span style=\"color:'+accent+';font-weight:900;font-size:15px;margin:0 6px;\">'+score+'分</span><span style=\"margin-left:4px;\">'+bar+'</span></div>';});return rows;})()}
+            </div>
+            <div id="lockedContent" style="margin-top:10px;border:2px dashed #ff9a5a;border-radius:14px;padding:14px;background:#fffdf6;text-align:center;">
+                <div style="font-size:56px;line-height:1;margin-bottom:6px;">🔒</div>
+                <div style="font-size:16px;font-weight:800;color:#e0557f;margin-bottom:2px;">关注公众号「你的爱情判官」解锁完整报告</div>
+                <div style="font-size:12px;color:#999;margin-bottom:12px;">💡 关注后回复「解锁」获取解锁码</div>
+                <div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;">
+                    <input id="unlockCodeInput" type="text" placeholder="输入解锁码" onkeydown="if(event.key==='Enter')checkUnlockCode()" style="padding:10px 14px;border-radius:10px;border:2px solid #ddd;font-size:15px;text-align:center;width:140px;outline:none;">
+                    <button class="btn btn-primary" style="font-size:14px;padding:10px 18px;" onclick="checkUnlockCode()">🔓 解锁</button>
+                </div>
+                <div style="font-size:13px;color:#e0557f;font-weight:700;margin-top:8px;display:none;" id="unlockError">❌ 解锁码错误，请重新输入</div>
+                <!-- 解锁后展示的内容 -->
+                <div id="hiddenReport" style="display:none;text-align:left;margin-top:14px;">
             <div class="radar-wrap" style="margin-top:6px;">
                 <div class="radar-title">📡 六维能力雷达图</div>
                 <div class="radar-sub">${versionLabel} · 颜值/财富/学历/情商/事业/家庭</div>
                 <canvas id="radarCanvas" width="640" height="480"></canvas>
             </div>
-            <div class="result-detail">${gradeInfo.detail}<br><br>📋 <b>${versionLabel}</b> · 共${totalCategories}项评分 · 满分100分</div>
+            <div id="strengthAdvice" style="background:#fffdf6;border:1px solid #ffe8b3;border-radius:12px;padding:12px 14px;margin:10px 0;text-align:left;font-size:13px;line-height:1.8;color:#8a6a3a;"></div>
+            <div class="result-detail">${gradeInfo.detail}<br><br><b>🔍 深度分析：</b><br>你的最强项决定了你在婚恋市场中的定位。S级是全方位顶配，A级是优质选手，每一级都有不同的打法和策略。不要只盯着总分，更重要的是扬长避短。<br><br>📋 <b>${versionLabel}</b> · 共${totalCategories}项评分 · 满分100分</div>
+                </div>
+            </div><!-- /lockedContent -->
             <!-- 二次测试推荐 -->
             <div style="margin-top:14px;text-align:left;background:#fdf6f7;border-radius:14px;padding:14px 16px;">
                 <div style="font-weight:700;font-size:14px;margin-bottom:8px;">🔍 猜你还想测</div>
@@ -3075,6 +3104,7 @@
             document.getElementById('resultModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
             tagCycleIdx[gradeInfo.grade] = 0;
+            setTimeout(tryAutoUnlock, 200);
         }
         function showStrengthAdvice() {
             const el = document.getElementById('strengthAdvice');
@@ -3404,6 +3434,7 @@
             document.getElementById('resultModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
             tagCycleIdx[gradeInfo.grade] = 0;
+            
         }
         function showStrengthAdvice() {
             const el = document.getElementById('strengthAdvice');
@@ -4182,6 +4213,33 @@
             document.getElementById('crushQuiz').style.display = 'none';
             document.getElementById('crushSelect').style.display = 'block';
             window._crushPicks = [];
+        }
+
+        
+        // ==================== 报告解锁 ====================
+        const UNLOCK_CODES = ['LOVE2024','CP888','判官520','xq1314','U1234'];
+        function checkUnlockCode() {
+            const inp = document.getElementById('unlockCodeInput');
+            const err = document.getElementById('unlockError');
+            const code = (inp && inp.value || '').trim().toUpperCase();
+            if (UNLOCK_CODES.map(c=>c.toUpperCase()).includes(code)) {
+                document.getElementById('hiddenReport').style.display = 'block';
+                if (err) err.style.display = 'none';
+                try { localStorage.setItem('xiangqin_unlocked','true'); } catch(e) {}
+                setTimeout(() => { drawRadarChart(); showStrengthAdvice(); }, 300);
+                showToast('✅ 解锁成功！完整报告已呈现');
+            } else {
+                if (err) { err.style.display = 'block'; err.style.animation = 'unlockShake 0.5s'; setTimeout(()=>{ err.style.animation = ''; },500); }
+                if (inp) { inp.style.borderColor = '#e0557f'; inp.value = ''; }
+            }
+        }
+        function tryAutoUnlock() {
+            try {
+                if (localStorage.getItem('xiangqin_unlocked') === 'true') {
+                    const hr = document.getElementById('hiddenReport');
+                    if (hr) { hr.style.display = 'block'; setTimeout(() => { drawRadarChart(); showStrengthAdvice(); }, 300); }
+                }
+            } catch(e) {}
         }
 
                 // ==================== 初始化 ====================
